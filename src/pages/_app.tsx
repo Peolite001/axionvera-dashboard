@@ -1,10 +1,9 @@
 import type { AppProps } from "next/app";
 import { Toaster } from 'sonner';
-import { ThemeProvider as NextThemeProvider } from 'next-themes';
 
 import "@/styles/globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ThemeProvider as AppThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { WalletProvider } from "@/contexts/WalletContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { inter, jetbrainsMono } from "@/lib/fonts";
