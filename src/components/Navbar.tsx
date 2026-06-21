@@ -106,6 +106,9 @@ export default function Navbar({ publicKey, isConnecting, onConnect, onDisconnec
             <Link href="/dashboard" className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-900/60">
               Vault
             </Link>
+            <Link href="/analytics" className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-900/60">
+              Analytics
+            </Link>
             <Link href="/profile" className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-900/60">
               Profile
             </Link>

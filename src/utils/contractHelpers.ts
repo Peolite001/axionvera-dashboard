@@ -19,12 +19,41 @@ export type VaultBalances = {
   rewards: string;
 };
 
+export type HistoricalBalancePoint = {
+  timestamp: string;
+  balance: string;
+  rewards: string;
+};
+
+export type RewardPerformance = {
+  totalRewardsEarned: string;
+  averageRewardRate: string; // percentage
+  lastRewardDate: string | null;
+};
+
+export type VaultParticipationMetrics = {
+  totalDeposits: string;
+  totalWithdrawals: string;
+  netDeposits: string;
+  transactionCount: number;
+  firstInteractionDate: string | null;
+  lastInteractionDate: string | null;
+  activeDays: number;
+};
+
+export type AnalyticsData = {
+  historicalBalances: HistoricalBalancePoint[];
+  rewardPerformance: RewardPerformance;
+  participationMetrics: VaultParticipationMetrics;
+};
+
 export type AxionveraVaultSdk = {
   getBalances: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultBalances>;
   getTransactions: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultTx[]>;
   deposit: (args: { walletAddress: string; network: StellarNetwork; amount: string }, options?: ApiCallOptions) => Promise<VaultTx>;
   withdraw: (args: { walletAddress: string; network: StellarNetwork; amount: string }, options?: ApiCallOptions) => Promise<VaultTx>;
   claimRewards: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultTx>;
+  getAnalytics: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<AnalyticsData>;
 };
 
 export function shortenAddress(address: string, chars = 6) {
@@ -179,6 +208,90 @@ export function createAxionveraVaultSdk(): AxionveraVaultSdk {
       };
       saveVault(walletAddress, network, next);
       return completed;
+    },
+    async getAnalytics({ walletAddress, network }: { walletAddress: string; network: StellarNetwork }) {
+      await sleep(200);
+      const vault = loadVault(walletAddress, network);
+      const txs = vault.txs.filter(tx => tx.status === "success");
+      
+      // Generate historical balances (last 30 days)
+      const historicalBalances: HistoricalBalancePoint[] = [];
+      let currentBalance = 0;
+      let currentRewards = 0;
+      const now = new Date();
+      
+      for (let i = 30; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const timestamp = date.toISOString();
+        
+        // Simulate balance changes based on transactions
+        const txsOnDay = txs.filter(tx => {
+          const txDate = new Date(tx.createdAt);
+          return txDate.toDateString() === date.toDateString();
+        });
+        
+        txsOnDay.forEach(tx => {
+          if (tx.type === "deposit") {
+            currentBalance += Number(tx.amount);
+            currentRewards += Number(tx.amount) * 0.01;
+          } else if (tx.type === "withdraw") {
+            currentBalance = Math.max(0, currentBalance - Number(tx.amount));
+          } else if (tx.type === "claim") {
+            currentBalance += currentRewards;
+            currentRewards = 0;
+          }
+        });
+        
+        historicalBalances.push({
+          timestamp,
+          balance: toFixedString(currentBalance),
+          rewards: toFixedString(currentRewards)
+        });
+      }
+      
+      // Calculate reward performance
+      const claimTxs = txs.filter(tx => tx.type === "claim");
+      const totalRewardsEarned = claimTxs.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const lastClaimTx = claimTxs.length > 0 ? claimTxs[0] : null;
+      const averageRewardRate = totalRewardsEarned > 0 ? "1.0" : "0"; // 1% mock rate
+      
+      // Calculate participation metrics
+      const depositTxs = txs.filter(tx => tx.type === "deposit");
+      const withdrawTxs = txs.filter(tx => tx.type === "withdraw");
+      const totalDeposits = depositTxs.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const totalWithdrawals = withdrawTxs.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const netDeposits = totalDeposits - totalWithdrawals;
+      const transactionCount = txs.length;
+      
+      const firstInteractionDate = txs.length > 0 ? txs[txs.length - 1].createdAt : null;
+      const lastInteractionDate = txs.length > 0 ? txs[0].createdAt : null;
+      
+      // Calculate active days
+      const activeDaysSet = new Set<string>();
+      txs.forEach(tx => {
+        const date = new Date(tx.createdAt).toDateString();
+        activeDaysSet.add(date);
+      });
+      const activeDays = activeDaysSet.size;
+      
+      return {
+        historicalBalances,
+        rewardPerformance: {
+          totalRewardsEarned: toFixedString(totalRewardsEarned),
+          averageRewardRate,
+          lastRewardDate: lastClaimTx ? lastClaimTx.createdAt : null
+        },
+        participationMetrics: {
+          totalDeposits: toFixedString(totalDeposits),
+          totalWithdrawals: toFixedString(totalWithdrawals),
+          netDeposits: toFixedString(netDeposits),
+          transactionCount,
+          firstInteractionDate,
+          lastInteractionDate,
+          activeDays
+        }
+      };
     }
   };
 
@@ -203,6 +316,10 @@ export function createAxionveraVaultSdk(): AxionveraVaultSdk {
     claimRewards: withErrorHandling(
       withApiResilience(baseSdk.claimRewards, { timeout: 10000, retries: 1 }),
       'claimRewards'
+    ),
+    getAnalytics: withErrorHandling(
+      withApiResilience(baseSdk.getAnalytics, { timeout: 5000, retries: 2 }),
+      'getAnalytics'
     )
   };
 }
