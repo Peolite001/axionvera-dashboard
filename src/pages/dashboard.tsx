@@ -62,6 +62,7 @@ export default function DashboardPage() {
                     onDeposit={vault.deposit}
                     status={vault.depositStatus}
                     walletBalance={wallet.balance ? parseFloat(wallet.balance) : null}
+                    walletAddress={wallet.publicKey}
 
                     statusMessage={
                       vault.depositStatus === "pending"
@@ -90,6 +91,7 @@ export default function DashboardPage() {
                             : null
                     }
                     transactionHash={vault.withdrawHash}
+                    walletAddress={wallet.publicKey}
                   />
                 </div>
                 <div className="mt-6 w-full overflow-x-auto">
