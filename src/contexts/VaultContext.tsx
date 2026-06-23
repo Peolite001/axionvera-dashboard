@@ -15,8 +15,9 @@ import {
   type VaultTx,
   type AnalyticsData,
 } from "@/utils/contractHelpers";
-import { NETWORK } from "@/utils/networkConfig";
+import { NETWORK, AXIONVERA_VAULT_CONTRACT_ID } from "@/utils/networkConfig";
 import { notify } from "@/utils/notifications";
+import { useSorobanEvents } from "@/hooks/useSorobanEvents";
 
 type VaultActionType = "deposit" | "withdraw";
 type VaultActionState = {
@@ -122,6 +123,16 @@ export function VaultProvider({ children, walletAddress, sdk: providedSdk }: Vau
       setState((s) => ({ ...s, analyticsLoading: false, analyticsError: message }));
     }
   }, [sdk]);
+
+  const handleEvent = useCallback(() => {
+    refresh();
+    refreshAnalytics();
+  }, [refresh, refreshAnalytics]);
+
+  useSorobanEvents({
+    contractId: AXIONVERA_VAULT_CONTRACT_ID,
+    onEvent: handleEvent,
+  });
 
   useEffect(() => { void refresh(); }, [refresh, walletAddress]);
   useEffect(() => { void refreshAnalytics(); }, [refreshAnalytics, walletAddress]);
