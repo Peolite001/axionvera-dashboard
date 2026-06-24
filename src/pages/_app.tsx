@@ -12,6 +12,8 @@ import { inter, jetbrainsMono } from "@/lib/fonts";
 
 import { useEffect } from "react";
 import { initTelemetry } from "@/utils/telemetry";
+import { GovernanceProvider } from "@/contexts/GovernanceContext";
+
 
 function AppInner({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -50,5 +52,9 @@ function VaultProviderWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export default function App(props: AppProps) {
-  return <AppInner {...props} />;
+  return <GovernanceProvider walletAddress={wallet.address}>
+  <VaultProviderWrapper>
+    <AppInner {...props} />
+  </VaultProviderWrapper>
+</GovernanceProvider>;
 }
